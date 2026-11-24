@@ -185,7 +185,9 @@ public final class MainActivity extends Activity {
           + "Chú ý: Bộ máy xử lý trong CloneTTS, không tích hợp vào APK này. "
           + "Khả năng đọc tiếng Việt cần thử thực tế.", 13, MUTED, false), 0, 12);
 
-        Button test = button("KIỂM TRA KẾT NỐI", false);
+        Button test = button("BẤM ĐỂ KIỂM TRA KẾT NỐI", true);
+        test.setEnabled(true);
+        test.setContentDescription("Kiểm tra kết nối cục bộ với CloneTTS");
         test.setOnClickListener(v -> testEngine());
         add(root, test, 0, 9);
 
