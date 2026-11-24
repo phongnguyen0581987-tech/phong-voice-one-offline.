@@ -1,26 +1,19 @@
-# Phong Voice One — Android Offline (source build)
+# Phong Voice One 1.4.0 — tiếng Việt offline
 
-Ứng dụng Android riêng để nhập văn bản tiếng Việt, yêu cầu tạo giọng **Phong**, nghe và lưu WAV/MP3. Không kết nối cloud, không gọi ElevenLabs.
+Đây là bản thay thế CloneTTS bằng bộ máy **Android TextToSpeech**, yêu cầu giọng đọc vi-VN **không cần mạng**. Bản này nhập văn bản tiếng Việt (tối đa 3.000 ký tự), tạo WAV, nghe lại và lưu file bằng điện thoại Samsung.
 
-**Đây là ứng dụng khách (client), không phải mô hình nhân bản giọng độc lập.** Trên điện thoại cần cài [CloneTTS](https://github.com/sipeter/CloneTTS/releases), tạo giọng với tên/alias `Phong`, bật `Settings > Local HTTP API Service`. Sau khi cài mô hình, bộ máy có thể xử lý offline. Chất lượng đọc tiếng Việt và độ giống giọng chưa được kiểm chứng.
+**Lưu ý bắt buộc:** Bản này sử dụng một giọng tiếng Việt có sẵn. **Chưa sử dụng file giọng mẫu Phong và không có tính năng voice cloning.** Để clone thật sự phải tích hợp mô hình Việt riêng và kiểm thử trên thiết bị; không tự gọi giọng mặc định là giọng Phong.
 
-## Chẩn đoán tạo giọng
+## Cài đặt
+1. Cài APK Phong Voice One 1.4.0 từ GitHub Actions.
+2. Cài bộ máy tiếng Việt Android sherpa-onnx từ trang chính chủ: https://k2-fsa.github.io/sherpa/onnx/tts/apk-engine.html
+3. Trên Samsung ARM64, tìm file engine tên có `arm64-v8a-vie-tts-engine-vits-piper-vi_VN-vais1000-medium.apk`. Đây là bản Piper được huấn luyện cho tiếng Việt. Không phải giọng clone cá nhân.
+4. Vào Cài đặt Samsung, tìm "Chuyển văn bản thành giọng nói" / "Text-to-speech output", chọn công cụ ưu tiên sherpa-onnx tiếng Việt.
+5. Mở Phong Voice One và bấm KIỂM TRA GIỌNG TIẾNG VIỆT, sau đó nhập một câu ngắn và bấm TẠO ÂM THANH TIẾNG VIỆT.
+6. Khi đã tạo WAV thì NGHE THỬ và LƯU FILE WAV sẽ được bật.
 
-Bản v1.3.0: nhập đúng cổng dịch vụ hiển thị trong CloneTTS (không bắt buộc 8080). Bấm **KIỂM TRA KẾT NỐI** xác minh cổng có máy chủ đang chạy; kiểm tra này **không** chứng minh mô hình có thể đọc tiếng Việt. Bấm **TẠO GIỌNG ĐỌC** và xem thông báo lỗi HTTP cụ thể. Nút **NGHE THỬ** và **LƯU ÂM THANH** chỉ mở khi thực sự nhận được WAV hoặc MP3. Trước tiên hãy kiểm tra CloneTTS đọc được một câu ngay trong ứng dụng gốc.
+Phần mềm chỉ chọn giọng có mã ngôn ngữ `vi` và `isNetworkConnectionRequired() == false`. Không có giọng Việt offline thì báo lỗi, **không thay bằng giọng tiếng Anh/Trung hoặc gọi giọng trên Internet**.
 
-## Quy trình
-1. Tải APK từ **Actions > Build Phong Voice One APK > build-debug-apk > Artifacts**. File tên `PhongVoice-One-Android-debug-APK.zip`; giải nén để lấy `app-debug.apk`.
-2. Cài `app-debug.apk` vào điện thoại. Android có thể hỏi quyền cài ứng dụng ngoài Play Store.
-3. Cài CloneTTS từ trang Releases chính chủ. Trong CloneTTS: Voices > Add Voice > Select External để chọn **file âm thanh cá nhân đang lưu trong điện thoại** (KHÔNG nằm trong repo), dán lời mẫu khớp chính xác, đặt alias `Phong`, Save & Enable. Trong Settings bật Local HTTP API Service (cổng 8080).
-4. Mở Phong Voice One, nhấn Kiểm tra kết nối, dán câu ngắn và bấm TẠO GIỌNG ĐỌC; thử offline bằng cách bật chế độ máy bay.
-5. Kết quả WAV được lưu dưới đuôi WAV, MP3 được lưu dưới đuôi MP3. Không đổi đuôi WAV thành MP3.
+Bản 1.4.0 KHÔNG sử dụng CloneTTS, HTTP local port 8080 hay permission INTERNET. Mã nguồn công khai không chứa dữ liệu giọng mẫu cá nhân.
 
-## Bảo vệ dữ liệu
-Kho mã nguồn này là PUBLIC. **KHÔNG đăng giọng mẫu thật, bản ghi âm, khóa cá nhân, hoặc văn bản riêng tư lên GitHub.** File mẫu được nhập **trực tiếp trên Samsung** vào CloneTTS. Mã nguồn chỉ gửi văn bản tới `http://127.0.0.1:8080/api/tts` qua kết nối loopback trên chính điện thoại; không có mô hình TTS hoặc dữ liệu giọng trong APK này. `INTERNET` là permission Android bắt buộc để gọi HTTP loopback.
-
-## Kỹ thuật
-Android Java không dùng dependency ngoài; Java 17, AGP 8.7.3, Gradle 8.9, Android SDK 35. Push vào main sẽ chạy GitHub Actions và đính kèm debug APK trong Artifacts nếu biên dịch thành công. Đây là APK debug (dùng thử), không phải bản release đã ký phát hành.
-
-Tham khảo: https://github.com/sipeter/CloneTTS (API POST /api/tts, form-urlencoded, voice alias).
-
-**Giới hạn:** Không khẳng định đọc tiếng Việt giống giọng mẫu trước khi kiểm thử bằng Samsung. Nếu CloneTTS không hỗ trợ phát âm tiếng Việt phù hợp, cần thay mô hình TTS, không tự ý thay sang giọng khác.
+APK biên dịch được trên GitHub không đồng nghĩa đã chạy thử thành công trên Samsung. Sau khi biên dịch cần cài và kiểm tra lại một câu tiếng Việt, phát lại WAV và lưu file.
