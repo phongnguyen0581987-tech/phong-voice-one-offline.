@@ -42,7 +42,7 @@ public final class MainActivity extends Activity {
     private static final int EXPORT_AUDIO = 40;
     private static final int MAX_TEXT = 12000;
     private static final int MAX_AUDIO = 40 * 1024 * 1024;
-    private static final String API = "http://127.0.0.1:8080/api/tts";
+    private static final int DEFAULT_PORT = 8080;
     private static final String VOICE = "Phong";
     private static final int BG = Color.rgb(13, 17, 27);
     private static final int CARD = Color.rgb(27, 33, 46);
@@ -52,6 +52,7 @@ public final class MainActivity extends Activity {
 
     private final ExecutorService pool = Executors.newSingleThreadExecutor();
     private EditText edit;
+    private EditText portInput;
     private TextView status;
     private TextView count;
     private Button generate;
@@ -185,6 +186,18 @@ public final class MainActivity extends Activity {
           + "Chú ý: Bộ máy xử lý trong CloneTTS, không tích hợp vào APK này. "
           + "Khả năng đọc tiếng Việt cần thử thực tế.", 13, MUTED, false), 0, 12);
 
+        add(root, label("CỔNG DỊCH VỤ CLONETTS", 12, ACCENT, true), 14, 6);
+        add(root, label("Mở CloneTTS → Service & Engine. Xem số sau dấu hai chấm trong địa chỉ 127.0.0.1:PORT. Mặc định là 8080.", 12, MUTED, false), 0, 6);
+        portInput = new EditText(this);
+        portInput.setSingleLine(true);
+        portInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        portInput.setTextColor(WHITE);
+        portInput.setHintTextColor(MUTED);
+        portInput.setText(String.valueOf(getPreferences(MODE_PRIVATE).getInt("clonetts_port", DEFAULT_PORT)));
+        portInput.setBackground(background(CARD, 13));
+        portInput.setPadding(dp(16), dp(12), dp(16), dp(12));
+        add(root, portInput, 0, 12);
+        add(root, label("Lưu ý: Nghe thử và Tải về chỉ bật sau khi CloneTTS tạo âm thanh thành công.", 12, MUTED, false), 0, 12);
         Button test = button("BẤM ĐỂ KIỂM TRA KẾT NỐI", true);
         test.setEnabled(true);
         test.setContentDescription("Kiểm tra kết nối cục bộ với CloneTTS");
@@ -207,12 +220,30 @@ public final class MainActivity extends Activity {
         progress.setVisibility(value ? View.VISIBLE : View.GONE);
     }
 
+    private int selectedPort() throws IOException {
+        try {
+            int port = Integer.parseInt(portInput.getText().toString().trim());
+            if (port < 1024 || port > 65535) throw new NumberFormatException("port range");
+            getPreferences(MODE_PRIVATE).edit().putInt("clonetts_port", port).apply();
+            return port;
+        } catch (NumberFormatException e) {
+            throw new IOException("Cổng phải là số từ 1024 đến 65535. Kiểm tra trong CloneTTS.");
+        }
+    }
+
     private void testEngine() {
-        status.setText("Đang kiểm tra cổng 8080...");
+        final int port;
+        try {
+            port = selectedPort();
+        } catch (IOException e) {
+            status.setText(e.getMessage());
+            return;
+        }
+        status.setText("Đang kiểm tra cổng " + port + "...");
         pool.execute(() -> {
             boolean connected;
             try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress("127.0.0.1", 8080), 2300);
+                socket.connect(new InetSocketAddress("127.0.0.1", port), 2500);
                 connected = true;
             } catch (IOException e) {
                 connected = false;
@@ -220,8 +251,11 @@ public final class MainActivity extends Activity {
             final boolean ok = connected;
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
-                status.setText(ok ? "Đã thấy dịch vụ trên cổng 8080. Hãy thử tạo giọng Phong."
-                   : "Không kết nối được. Mở CloneTTS và bật Local HTTP API Service.");
+                status.setText(ok
+                    ? "Đã kết nối tới 127.0.0.1:" + port +
+                      ". Đây mới là kiểm tra máy chủ, chưa kiểm tra giọng. Hãy nhập 1 câu và bấm TẠO GIỌNG ĐỌC."
+                    : "Không thấy máy chủ tại 127.0.0.1:" + port +
+                      ". Trong CloneTTS bật Local HTTP API Service, lấy đúng cổng đang hiển thị, giữ CloneTTS chạy nền rồi thử lại.");
             });
         });
     }
@@ -236,6 +270,13 @@ public final class MainActivity extends Activity {
             status.setText("Văn bản dài hơn 12.000 ký tự.");
             return;
         }
+        final int port;
+        try {
+            port = selectedPort();
+        } catch (IOException e) {
+            status.setText(e.getMessage());
+            return;
+        }
         if (player != null) {
             player.release();
             player = null;
@@ -248,7 +289,7 @@ public final class MainActivity extends Activity {
         status.setText("Đang tạo giọng Phong bằng bộ máy cục bộ...");
         pool.execute(() -> {
             try {
-                File result = requestAudio(input);
+                File result = requestAudio(input, port);
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
                     lastAudio = result;
@@ -261,16 +302,16 @@ public final class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
                     busy(false);
-                    status.setText("Chưa tạo được audio: " + e.getMessage()
-                       + "\nKiểm tra cổng 8080 và alias Phong trong CloneTTS.");
+                    status.setText("TẠO GIỌNG CHƯA THÀNH CÔNG: " + e.getMessage()
+                       + "\nKiểm tra đúng cổng, dịch vụ HTTP và giọng có tên/alias Phong. Mở CloneTTS thử đọc trực tiếp trước.");
                 });
             }
         });
     }
 
-    private File requestAudio(String input) throws IOException {
-        URL url = new URL(API);
-        if (!"127.0.0.1".equals(url.getHost()) || url.getPort() != 8080)
+    private File requestAudio(String input, int port) throws IOException {
+        URL url = new URL("http://127.0.0.1:" + port + "/api/tts");
+        if (!"127.0.0.1".equals(url.getHost()) || url.getPort() != port)
             throw new IOException("Chỉ cho phép localhost.");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
@@ -288,7 +329,25 @@ public final class MainActivity extends Activity {
                 out.write(form.getBytes(StandardCharsets.UTF_8));
             }
             int http = conn.getResponseCode();
-            if (http != 200) throw new IOException("HTTP " + http);
+            if (http != 200) {
+                String serverMessage = "";
+                try (InputStream err = conn.getErrorStream()) {
+                    if (err != null) {
+                        ByteArrayOutputStream errorBytes = new ByteArrayOutputStream();
+                        byte[] buf = new byte[512];
+                        int n;
+                        while ((n = err.read(buf)) != -1 && errorBytes.size() < 1024) {
+                            errorBytes.write(buf, 0, Math.min(n, 1024 - errorBytes.size()));
+                        }
+                        serverMessage = new String(errorBytes.toByteArray(), StandardCharsets.UTF_8)
+                            .replaceAll("[\\r\\n\\t]+", " ").trim();
+                        if (serverMessage.length() > 280)
+                            serverMessage = serverMessage.substring(0, 280);
+                    }
+                } catch (IOException ignored) {}
+                throw new IOException("CloneTTS trả lỗi HTTP " + http
+                    + (serverMessage.isEmpty() ? "" : ": " + serverMessage));
+            }
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             try (InputStream in = conn.getInputStream()) {
                 byte[] part = new byte[16384];
@@ -308,7 +367,7 @@ public final class MainActivity extends Activity {
             boolean mp3 = bytes.length >= 4
                 && ((bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3')
                     || ((bytes[0] & 0xff) == 0xff && (bytes[1] & 0xe0) == 0xe0));
-            if (!wav && !mp3) throw new IOException("CloneTTS không trả WAV/MP3.");
+            if (!wav && !mp3) throw new IOException("Dịch vụ có phản hồi nhưng không trả file WAV/MP3. Kiểm tra giọng trong CloneTTS.");
             File dest = new File(getCacheDir(), "PhongVoice_" + (mp3 ? "latest.mp3" : "latest.wav"));
             try (FileOutputStream out = new FileOutputStream(dest)) {
                 out.write(bytes);
