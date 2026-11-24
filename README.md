@@ -4,6 +4,10 @@
 
 **Đây là ứng dụng khách (client), không phải mô hình nhân bản giọng độc lập.** Trên điện thoại cần cài [CloneTTS](https://github.com/sipeter/CloneTTS/releases), tạo giọng với tên/alias `Phong`, bật `Settings > Local HTTP API Service`. Sau khi cài mô hình, bộ máy có thể xử lý offline. Chất lượng đọc tiếng Việt và độ giống giọng chưa được kiểm chứng.
 
+## Chẩn đoán tạo giọng
+
+Bản v1.3.0: nhập đúng cổng dịch vụ hiển thị trong CloneTTS (không bắt buộc 8080). Bấm **KIỂM TRA KẾT NỐI** xác minh cổng có máy chủ đang chạy; kiểm tra này **không** chứng minh mô hình có thể đọc tiếng Việt. Bấm **TẠO GIỌNG ĐỌC** và xem thông báo lỗi HTTP cụ thể. Nút **NGHE THỬ** và **LƯU ÂM THANH** chỉ mở khi thực sự nhận được WAV hoặc MP3. Trước tiên hãy kiểm tra CloneTTS đọc được một câu ngay trong ứng dụng gốc.
+
 ## Quy trình
 1. Tải APK từ **Actions > Build Phong Voice One APK > build-debug-apk > Artifacts**. File tên `PhongVoice-One-Android-debug-APK.zip`; giải nén để lấy `app-debug.apk`.
 2. Cài `app-debug.apk` vào điện thoại. Android có thể hỏi quyền cài ứng dụng ngoài Play Store.
