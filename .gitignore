@@ -1,0 +1,17 @@
+.gradle/
+.idea/
+build/
+app/build/
+local.properties
+*.iml
+*.apk
+*.keystore
+*.jks
+*.mp3
+*.wav
+*.opus
+*.aac
+*.m4a
+*.b64
+private/
+secrets/
